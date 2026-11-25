@@ -1,16 +1,4 @@
 #!/usr/bin/env python3
-"""End of run: summary, then archive the applications log and leave an empty one.
-
-  end_run.py [rows_file]
-
-rows_file (written by run.sh) has one "<marker>\t<row>" line per queue row this run touched.
-With it, a summary block goes on top of the log and of state/status.md. Without it (interactive
-runs), the log is archived as is: write the summary at its top first.
-The log then moves to logs/archive/applications-log-<stamp>.md and logs/applications-log.md is
-reset to its header, so the next run starts from an empty file. Finished queue rows ([x], [-]) move
-from data/queue.md to logs/archive/queue-done.md so the queue every session reads stays small.
-dupe_check.sh greps the archive.
-"""
 import datetime, os, re, sys
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -62,7 +50,7 @@ def prune_queue(now):
         if DONE.match(l):
             in_done = True
         elif not (in_done and l[:1] in (' ', '\t') and l.strip()):
-            in_done = False   # indented lines right after a finished row belong to it
+            in_done = False
         (done if in_done else keep).append(l)
     if not done:
         return

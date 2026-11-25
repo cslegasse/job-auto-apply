@@ -1,17 +1,10 @@
 #!/usr/bin/env python3
-"""Per-session cost log for run.sh.
-
-  session_log.py add <type> <row> <outcome> <start_epoch> <result.json | ->
+USAGE = """  session_log.py add <type> <row> <outcome> <start_epoch> <result.json | ->
       ('-' = no session started, e.g. a pre-gate skip)
       Append one row to logs/sessions.tsv from a `claude -p --output-format json` result,
       and print the session's `result` text to stdout (what `claude -p` used to print).
   session_log.py report
       Print logs/sessions.tsv as an aligned table.
-
-Token fields stay separate (fresh input, 5m/1h cache writes, cache reads, output). The
-weighted_usd column prices them per model from PRICES (USD per million tokens, from
-https://platform.claude.com/docs/en/about-claude/pricing, read 2026-11-25). cli_usd is the
-CLI's own total_cost_usd, kept as a cross-check.
 """
 import json
 import os
@@ -21,7 +14,6 @@ import time
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOG = os.path.join(R, 'logs', 'sessions.tsv')
 
-# model id prefix -> (input, 5m write, 1h write, cache read, output) USD / MTok
 PRICES = {
     'claude-opus-5-5': (4.00, 5.00, 8.00, 0.20, 20.00),
     'claude-sonnet-5-5': (2.00, 2.50, 4.00, 0.10, 10.00),
@@ -43,7 +35,7 @@ def price(model, mu):
 
 
 def add(kind, row, outcome, start, path):
-    if path == '-':  # no session was started (pre-gate skip): zero tokens by construction
+    if path == '-':
         d = {'is_error': False, 'result': ''}
     else:
         try:
@@ -91,4 +83,4 @@ if __name__ == '__main__':
     elif sys.argv[1:2] == ['report']:
         report()
     else:
-        sys.exit(__doc__)
+        sys.exit(USAGE)

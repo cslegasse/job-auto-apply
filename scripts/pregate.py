@@ -1,21 +1,4 @@
 #!/usr/bin/env python3
-"""Deterministic gates for one queue row, run by run.sh BEFORE an apply session starts.
-
-  pregate.py "<queue row>"
-  exit 0  = no deterministic reason to skip: start the session
-  exit 10 = skip: prints the reason and appends one SKIPPED line to logs/applications-log.md
-Either way it writes state/pregate.json: each check's result, dupe_check output, the ATS posting
-(title, location, comp, description) and form_schema.py output, so the session reads instead of
-recomputing.
-
-Only exact facts skip a row. Anything fuzzy, unparsable, or a network error passes through to the
-session, which decides as before. Checks, in order:
-  1. interview tracker  (scripts/dupe_check.sh exit 3)
-  2. same req already SUBMITTED  (req id from the row URL found in a SUBMITTED log entry)
-  3. lifetime cap  (distinct SUBMITTED roles for the exact company name >= the cap)
-  4. same-day freeze  (a SUBMITTED entry for the exact company dated today)
-  5. posting closed  (Greenhouse/Lever API 404, or the req missing from the Ashby job board)
-"""
 import glob
 import html
 import json
@@ -51,7 +34,6 @@ def req_id(url):
 
 
 def submitted_entries():
-    """(date, company, role, entry text) for every SUBMITTED entry in the live and archived logs."""
     files = [LOG] + sorted(glob.glob(os.path.join(R, 'logs', 'archive', 'applications-log-*.md')))
     out = []
     for f in files:
@@ -79,7 +61,6 @@ def submitted_entries():
 
 
 def text(s):
-    """HTML (possibly entity-escaped twice, as Greenhouse sends it) to plain text."""
     s = html.unescape(html.unescape(s or ''))
     s = re.sub(r'<(br|/p|/li|/h\d|/div)[^>]*>', '\n', s, flags=re.I)
     s = re.sub(r'<[^>]+>', '', s)
@@ -87,8 +68,6 @@ def text(s):
 
 
 def posting(url):
-    """(status, data) from the ATS posting API. status: 'live', 'closed' (the ATS says it is gone:
-    404, or the req missing from the Ashby board) or 'unknown' (unsupported URL, network error)."""
     def get(u):
         return json.loads(urllib.request.urlopen(
             urllib.request.Request(u, headers={'User-Agent': 'Mozilla/5.0'}), timeout=20).read())
@@ -138,8 +117,6 @@ def main():
     url = urls[0] if urls else ''
     rid = req_id(url) if url else None
     reason = None
-    # Everything checked here goes to state/pregate.json, so the session reads it instead of
-    # recomputing. 'pass' = checked and clear; anything else the session must judge or redo.
     found = {'row': row, 'company': company, 'role': role, 'url': url, 'req_id': rid, 'checks': {}}
     chk = found['checks']
 
@@ -153,20 +130,15 @@ def main():
     subs = submitted_entries() if not reason else []
     mine = [e for e in subs if e[1].lower() == company.lower()]
     if not reason and rid:
-        # compare whole req ids taken from URLs in the entry, never substrings of free text
         hit = next((e for e in subs if rid in {req_id(u) for u in re.findall(r'https?://\S+', e[3])}), None)
         if hit:
             reason = f'same req {rid} already SUBMITTED {hit[0]}'
         chk['same_req'] = 'hit' if hit else 'pass'
     if not reason:
         cap = int(cfg('run.max_applications_per_company_lifetime', '2'))
-        # one key per role title, location parentheticals dropped, so the two log formats
-        # (summary line and '###' block) of one application count once; undercounting only defers
-        # the call to the session
         roles = {' '.join(re.sub(r'\([^)]*\)', ' ', e[2]).lower().split()) for e in mine}
         if len(roles) >= cap:
             reason = f'lifetime cap reached ({len(roles)} of {cap} for {company})'
-        # exact company name only: similar names in dupe_check output are the session's call
         chk['lifetime_cap'] = f'{len(roles)} of {cap} (exact name)'
     if not reason and cfg('run.same_day_company_freeze', 'True') == 'True':
         today = time.strftime('%Y-%m-%d')

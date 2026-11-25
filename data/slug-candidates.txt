@@ -1,14 +1,3 @@
-# Add new candidates at the end; a PR adding real ones is very welcome.
-# Added 2026-08-17 (hundred-and-thirteenth iteration): ~1450 new candidate slugs probed
-# Added 2026-08-20 (run 120): 110 previously-untried slugs probed against Ashby,
-# Added 2026-08-25 (run 127): slugs confirmed live by the fresh-slug probe and the
-# Added 2026-09-02 (hundred-and-forty-third iteration): HYPHENATED variants. The unhyphenated forms
-# Dead slugs stay here on purpose: boards come back, and re-probing is cheap.
-# Every ATS org slug this project has tried, live or dead. One per line.
-# Greenhouse and Lever. 15 came back live.
-# dead-slug re-probe. 1,158 generated slugs -> 11 live; 2,940 recorded-dead slugs -> 65 live.
-# scripts/delta_sweep.py reads this list; scripts/list_sweep.py appends to it.
-# were already in this list and return empty; the hyphenated forms are live. Always add both.
 0x
 100ms
 11x

@@ -82,7 +82,7 @@ def selftest():
     print('selftest ok')
 
 def main():
-    sys.stdout.reconfigure(encoding='utf-8')  # the PARTIAL marker is a star; Windows consoles default to cp1252
+    sys.stdout.reconfigure(encoding='utf-8')
     args = sys.argv[1:]
     if '--selftest' in args: return selftest()
     S = json.load(open(os.path.join(R, 'config', 'settings.json')))

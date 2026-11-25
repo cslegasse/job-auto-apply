@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""data/queue.md row helper for the one-application-per-session loop.
-
-  queue_row.py next             first pending "- [ ]" row (exit 1 if none)
+USAGE = """  queue_row.py next             first pending "- [ ]" row (exit 1 if none)
   queue_row.py status "<row>"   current marker of that row: " ", x, ~, -, or ? if gone
   queue_row.py mark "<row or URL>" <x|~|-> "<reason>"   set that row's marker, append the reason
   queue_row.py prompt "<row>"   prompts/apply_one.md filled in ($RUN_CONFIG used if set)
@@ -22,8 +20,6 @@ def lines():
 
 
 def find(row):
-    # Rows are matched by whole URL so a session appending a note does not break the match,
-    # and .../jobs/123 never matches .../jobs/1234.
     u = urls(row)
     k = u[0] if u else None
     for i, l in enumerate(lines()):
@@ -34,7 +30,7 @@ def find(row):
 
 
 def main():
-    sys.stdout.reconfigure(encoding='utf-8')  # rows carry em dashes; Windows consoles default to cp1252
+    sys.stdout.reconfigure(encoding='utf-8')
     cmd, args = sys.argv[1], sys.argv[2:]
     if cmd == 'next':
         for l in lines():
@@ -46,7 +42,7 @@ def main():
         _, m = find(args[0])
         print(m.group(2) if m else '?'); return 0
     if cmd == 'mark':
-        if len(args) < 2: print(__doc__); return 2
+        if len(args) < 2: print(USAGE); return 2
         mk, reason = args[1], args[2] if len(args) > 2 else ''
         if mk not in ('x', '~', '-'): print('marker must be x, ~ or -'); return 2
         ls = lines(); i, m = find(args[0])
@@ -58,7 +54,7 @@ def main():
         t = open(os.path.join(R, 'prompts', 'apply_one.md'), encoding='utf-8').read()
         cfg = os.environ.get('RUN_CONFIG') or 'Run python3 scripts/run_config.py and obey its output.'
         print(t.replace('{{ROW}}', args[0]).replace('{{RUN_CONFIG}}', cfg)); return 0
-    print(__doc__); return 2
+    print(USAGE); return 2
 
 
 if __name__ == '__main__':

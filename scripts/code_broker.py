@@ -4,8 +4,6 @@ import email, email.header, email.utils, getpass, html, imaplib, json, os, re, s
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOG = os.path.join(R, 'state', 'broker.jsonl')
 IS_WIN = os.name == 'nt'
-# Windows: the Gmail app password lives in this file, encrypted with DPAPI (only this Windows user
-# can decrypt it). Written by `code_broker.py store`, which the USER runs in their own terminal.
 SECRET = os.path.join(R, 'state', 'broker_secret.bin')
 DEFAULTS = {'gmail_account': '', 'signup_email_pattern': '', 'keychain_service': 'jobapply-gmail-imap'}
 
@@ -60,14 +58,13 @@ if IS_WIN:
     def win_clip_set(value):
         u32, k32 = _win32()
         def put(fmt, raw):
-            h = k32.GlobalAlloc(0x0002, len(raw))  # GMEM_MOVEABLE
+            h = k32.GlobalAlloc(0x0002, len(raw))
             ctypes.memmove(k32.GlobalLock(h), raw, len(raw)); k32.GlobalUnlock(h)
             if not u32.SetClipboardData(fmt, h): raise OSError('SetClipboardData failed')
         if not _open(u32): raise OSError('clipboard busy')
         try:
             u32.EmptyClipboard()
-            put(13, (value + '\0').encode('utf-16-le'))  # CF_UNICODETEXT
-            # Keep the code out of Win+V history, cloud clipboard and clipboard monitors.
+            put(13, (value + '\0').encode('utf-16-le'))
             put(u32.RegisterClipboardFormatW('ExcludeClipboardContentFromMonitorProcessing'), b'\0')
             put(u32.RegisterClipboardFormatW('CanIncludeInClipboardHistory'), b'\0\0\0\0')
             put(u32.RegisterClipboardFormatW('CanUploadToCloudClipboard'), b'\0\0\0\0')
@@ -113,7 +110,6 @@ def mailboxes(M):
     return found or ['INBOX']
 
 KEY = re.compile(r'code|passcode|verification|verify|one[- ]time|\botp\b|\bpin\b', re.I)
-# Greenhouse codes are 8 mixed-case letters/digits; others are 4-8 chars, often 6 digits.
 CAND = re.compile(r'(?<![\w#/.@-])([A-Za-z0-9]{4,8})(?![\w/@-])')
 
 def text_of(msg):
@@ -140,8 +136,6 @@ def extract(text):
     return None, ('ambiguous' if pool else 'no_code')
 
 def dkim_ok(msg, domain):
-    # Trust only Gmail's own verdict. Gmail prepends its Authentication-Results header, so it is the
-    # topmost one; any further down were written by the sender and can claim dkim=pass for anyone.
     ars = msg.get_all('Authentication-Results') or []
     ar = ars[0] if ars else ''
     if not re.match(r'\s*mx\.google\.com\s*;', ar, re.I): return False
@@ -161,7 +155,7 @@ def to_clipboard(value, hold):
     if IS_WIN:
         try: seq = win_clip_set(value)
         except OSError as e: out('clipboard_error', 3, detail=str(e)[:200])
-        flags = 0x00000008 | 0x00000200  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
+        flags = 0x00000008 | 0x00000200
         subprocess.Popen([sys.executable, os.path.abspath(__file__), '_clear', str(hold), str(seq)], creationflags=flags,
                          stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True)
         return
