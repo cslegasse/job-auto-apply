@@ -9,15 +9,15 @@ config/profile.json and config/answers.md once each. For company/ATS notes run
 `grep -in "<Company>\|<ATS name>" data/ats-field-notes.md`. Do NOT read logs/, state/status.md,
 or data/queue.md: dupe_check.sh searches them. Truncate any curl output you print (`| head -c 4000`).
 
-1. Gate before any tab: `./scripts/dupe_check.sh "<Company>" [req-id]` (exit 3 = hard skip; exit 1 =
-   read the hits, apply the lifetime cap and same-day freeze). Confirm the posting is live and clears
-   the targets through the ATS API (`api.ashbyhq.com/posting-api/job-board/<org>?includeCompensation=true`,
-   `boards-api.greenhouse.io/v1/boards/<org>/jobs/<id>`, `api.lever.co/v0/postings/<org>/<id>`), and
-   grep the description for years, senior, staff, proven, at scale. Fail → step 6 with [-].
-   Then `python3 scripts/form_schema.py "<apply URL>"` (Ashby, Greenhouse, Lever; no browser). Match
-   every FREE line to a preset or fact in answers.md now. A required question with no answer → write
-   the doc with the drafted answers, mark [~], and stop without opening a tab. Exit 2 = read the form
-   in the browser with form_text.js instead.
+1. Gate before any tab: Read `state/pregate.json` (if missing or its `url` is not your row's, first run
+   `python3 scripts/pregate.py "<row>"`; exit 10 = mark [-] and stop). Do not redo a check it records:
+   `checks` passed (tracker, same req, cap and same-day freeze on the exact company name); `checks.posting`
+   not `live` → confirm it through the ATS API yourself.
+   Still yours: same-company hits under other names in `dupe_check.output`; the target check on
+   `posting` (comp, location, description: years, senior, staff, proven, at scale); and every FREE
+   line in `form_schema.output` matched to a preset or fact in answers.md. Fail → step 6 with [-]. A
+   required question with no answer → write the doc with drafted answers, mark [~], stop without a
+   tab. `form_schema.exit` 2 = read the form in the browser with form_text.js.
 2. Load the Chrome tools in ONE ToolSearch call, exactly:
    `select:mcp__claude-in-chrome__list_connected_browsers,mcp__claude-in-chrome__tabs_context_mcp,mcp__claude-in-chrome__tabs_create_mcp,mcp__claude-in-chrome__tabs_close_mcp,mcp__claude-in-chrome__navigate,mcp__claude-in-chrome__browser_batch,mcp__claude-in-chrome__computer,mcp__claude-in-chrome__find,mcp__claude-in-chrome__file_upload,mcp__claude-in-chrome__javascript_tool,mcp__claude-in-chrome__get_page_text`
    Group consecutive same-domain actions into one `browser_batch`, 3-8 actions each; locate targets

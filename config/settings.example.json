@@ -2,6 +2,8 @@
   "_readme": "Every knob the agent obeys. Copy to settings.json (first-run setup does this for you) and edit.",
   "run": {
     "max_applications_per_run": 3,
+    "queue_floor": 6,
+    "_queue_floor_note": "run.sh skips the sourcing session while data/queue.md holds at least this many pending [ ] rows. Omit to use 2 x max_applications_per_run.",
     "one_application_per_company_per_run": true,
     "same_day_company_freeze": true,
     "max_applications_per_company_lifetime": 2,
