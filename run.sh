@@ -33,6 +33,20 @@ if [ -n "$TRACKER_PATH" ] && [ ! -r "$TRACKER_PATH" ]; then
 fi
 
 MAX="${1:-$(cfg run.max_applications_per_run 3)}"
+# Cost: only the Chrome MCP server (stable cached prefix), and no interactive startup skills.
+HEADLESS_NOTE="Headless run.sh session: no human is present. Do not invoke the caveman-mode or grill-me skills; keep replies to one line."
+# project,local drops user plugins/hooks/MCP but also the user's model + effort, so pin those.
+# --tools is variadic: the prompt must come before these flags.
+CLAUDE_FLAGS=(--no-session-persistence --dangerously-skip-permissions --strict-mcp-config
+  --setting-sources project,local
+  --tools Bash,Read,Write,Edit,Grep,Glob,Skill,ToolSearch,Monitor,TaskStop
+  --append-system-prompt "$HEADLESS_NOTE" --output-format json)
+# Model and effort per session type; judge a change by cost per submit in logs/sessions.tsv.
+SOURCE_FLAGS=(--model opus --effort medium)
+# --max-turns is accepted by CLI 2.1.332 though --help omits it. Past submit sessions: p99 48, max 51.
+APPLY_FLAGS=(--model opus --effort medium --max-turns 60)
+# Sourcing runs only when the queue is low: fewer pending rows than run.queue_floor (default 2 x MAX).
+QUEUE_FLOOR="$(cfg run.queue_floor $((MAX * 2)))"
 SETTINGS_PROMPT="$(python3 scripts/run_config.py "$MAX")"
 
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
@@ -49,8 +63,14 @@ echo "$$" > "$LOCK_DIR/pid"
 trap 'rm -rf "$LOCK_DIR" 2>/dev/null || true' EXIT
 
 # Phase 1: sourcing in its own session, no browser. It only adds vetted [ ] rows to data/queue.md.
-if [ "$(cfg run.queue_only False)" != "True" ]; then
+PENDING="$(grep -c '^- \[ \]' data/queue.md 2>/dev/null || true)"
+if [ "$(cfg run.queue_only False)" = "True" ]; then
+  :
+elif [ "${PENDING:-0}" -ge "$QUEUE_FLOOR" ]; then
+  echo "Sourcing skipped: $PENDING pending rows >= queue floor $QUEUE_FLOOR."
+else
   rm -f state/sweep/portal_by_hand.tsv
+  mkdir -p state
   SOURCE_PROMPT="Sourcing pass for the job application run in $(pwd). Fresh session: derive state from repository files. Do NOT open a browser and do NOT apply to anything; a separate session per queue row does the applying.
 
 Load the source-jobs skill and follow it. CLAUDE.md is already in context; do not Read it.
@@ -58,7 +78,9 @@ Load the source-jobs skill and follow it. CLAUDE.md is already in context; do no
 RUN CONFIG (the target gate): ${SETTINGS_PROMPT}
 
 Queue at most $((MAX * 3)) rows. Add one status line to state/status.md only if you learned something new about a board. Then stop."
-  "$CLAUDE_BIN" -p --no-session-persistence --dangerously-skip-permissions "$SOURCE_PROMPT" || true
+  start=$(date +%s)
+  "$CLAUDE_BIN" -p "$SOURCE_PROMPT" "${CLAUDE_FLAGS[@]}" "${SOURCE_FLAGS[@]}" > state/session.json || true
+  python3 scripts/session_log.py add source "-" done "$start" state/session.json || true
 fi
 
 # Phase 2: one fresh session per queue row, so context never carries earlier applications.
@@ -71,14 +93,40 @@ export RUN_CONFIG="$SETTINGS_PROMPT"
 submitted=0
 while [ "$submitted" -lt "$MAX" ]; do
   ROW="$(python3 scripts/queue_row.py next)" || break
+  start=$(date +%s)
+  # Deterministic gates first: a row that fails one never starts a session.
+  PGRC=0; PG="$(python3 scripts/pregate.py "$ROW")" || PGRC=$?
+  if [ "$PGRC" -eq 10 ]; then
+    echo "$PG"
+    python3 scripts/queue_row.py mark "$ROW" - "${PG#pre-gate: } (pre-gate)" || true
+    python3 scripts/session_log.py add pregate "$ROW" - "$start" - || true
+    printf '%s\t%s\n' "-" "$ROW" >> "$ROWS_FILE"
+    continue
+  fi
   APPLY_PROMPT="$(python3 scripts/queue_row.py prompt "$ROW")"
-  "$CLAUDE_BIN" -p --chrome --no-session-persistence --dangerously-skip-permissions "$APPLY_PROMPT" || true
+  "$CLAUDE_BIN" -p "$APPLY_PROMPT" --chrome "${CLAUDE_FLAGS[@]}" "${APPLY_FLAGS[@]}" > state/session.json || true
+  LOGMARK="$(python3 scripts/queue_row.py status "$ROW" || echo '?')"
+  [ "$LOGMARK" = " " ] && LOGMARK=unmarked
+  LOGTYPE=apply; [ "$LOGMARK" = "-" ] && LOGTYPE=skip
+  python3 scripts/session_log.py add "$LOGTYPE" "$ROW" "$LOGMARK" "$start" state/session.json || true
   if [ -f state/chrome_down ]; then
     echo "Chrome not connected: $(cat state/chrome_down). Stopping; row left pending." >&2
     break
   fi
   MARK="$(python3 scripts/queue_row.py status "$ROW")"
-  if [ "$MARK" = " " ]; then
+  if [ "$MARK" = " " ] && grep -q '"subtype": *"error_max_turns"' state/session.json 2>/dev/null; then
+    # Turn cap hit mid-form: the tab may still be open and the form part-filled. A human checks it.
+    python3 - "$ROW" <<'PY' || true
+import re, sys, time
+row = sys.argv[1]; p = [x.strip() for x in row.split(' | ')]
+url = (re.findall(r'https?://\S+', row) or ['-'])[0]
+with open('logs/applications-log.md', 'a', encoding='utf-8') as f:
+    f.write(f"- [{time.strftime('%Y-%m-%d %H:%M')}] {p[0]} — {p[1] if len(p) > 1 else '?'} — NEEDS HUMAN — "
+            f"{url} — turn cap hit; tab may be left open in the Claude tab group, submit status unknown, check it\n")
+PY
+    python3 scripts/queue_row.py mark "$ROW" '~' "turn cap hit (--max-turns); check the open tab" || true
+    MARK="~"
+  elif [ "$MARK" = " " ]; then
     python3 scripts/queue_row.py mark "$ROW" - "apply session ended without setting a status; check logs" || true
     MARK="-"
   fi
