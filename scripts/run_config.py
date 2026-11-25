@@ -1,12 +1,4 @@
 #!/usr/bin/env python3
-"""config/settings.json -> the RUN CONFIG text that run.sh passes to every session.
-
-  run_config.py [max_override]   print the run-config prompt text
-  run_config.py --get a.b [def]  print one settings value (dotted path), or def if unset
-
-Rules that never change (no accounts, no fabrication, log before submit) live in CLAUDE.md,
-so they are not repeated here.
-"""
 import json, os, subprocess, sys
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

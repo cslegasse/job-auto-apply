@@ -35,6 +35,8 @@ data/    queue.md         # vetted targets, worked top-down   (yours, gitignored
 prompts/ apply_one.md     # the one-application prompt (headless and subagent)
 scripts/ run_config.py    # settings.json → run-config prompt text; --get key.path
          queue_row.py     # next pending row, its status, mark, the per-row apply prompt
+         pregate.py       # exact gates before a session; writes state/pregate.json for step 1
+         session_log.py   # one token/cost row per claude -p session → logs/sessions.tsv
          dupe_check.sh    # duplicate + interview-tracker check for one company
          form_schema.py   # an Ashby/Greenhouse/Lever form's questions from the API, no browser
          end_run.py       # run summary, archive the log and finished queue rows

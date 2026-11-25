@@ -268,10 +268,6 @@ which tells you whether a comp filter will work without reading body text.
 | `paradigm` | 1 | 1 |
 | `tempo` | 1 | 1 |
 
-## Added 2026-08-07 (eighty-fourth iteration)
-
-Four Greenhouse boards that had never been probed. Found by guessing quant slugs, not by any list.
-Counts are from that day's probe.
 
 - **`janestreet` — 230 jobs, LIVE.** Jane Street. Four reqs are titled "Software Engineer"; jids
   8419303002 and 8599644002 are INTERNSHIPS despite the identical title, and 8594541002 and

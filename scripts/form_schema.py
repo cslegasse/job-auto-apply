@@ -1,14 +1,4 @@
-"""Print an application form's questions from the ATS's public endpoints, before any browser tab.
 
-usage: python3 scripts/form_schema.py <posting or apply URL>
-
-Supports Ashby (non-user GraphQL), Greenhouse (boards-api ?questions=true) and Lever (the apply
-page's cards[...][baseTemplate] JSON). One line per question:
-    REQ|opt  type  label  [options]
-Required free-text questions are marked FREE so you can check answers.md for a preset before
-opening Chrome; a required one with no preset or fact means NEEDS HUMAN without a tab.
-Exit 2 = unsupported URL or the endpoint failed (fall back to form_text.js in the browser).
-"""
 import html
 import json
 import re
@@ -85,7 +75,7 @@ def main():
             title, rows = lever(*m_l.groups())
         else:
             print('unsupported URL: use form_text.js in the browser'); return 2
-    except Exception as e:  # endpoint change, 404, closed posting
+    except Exception as e:
         print(f'endpoint failed ({e}): use form_text.js in the browser'); return 2
     print(f'# {title}  ({len(rows)} fields)')
     free = 0

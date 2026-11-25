@@ -1,5 +1,3 @@
-"""Shared sweep helpers: short stdout (full rows go to a TSV), cutoff handling, SSL context,
-title focus, and the start-window season check."""
 import datetime, json, os, re, ssl, sys
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -23,7 +21,6 @@ def show(lines, path, head=HEAD):
 
 
 def parse_ts(s):
-    """ISO timestamp -> aware datetime (naive is taken as UTC); None if unparseable."""
     try:
         d = datetime.datetime.fromisoformat(s.strip().replace('Z', '+00:00'))
         return d if d.tzinfo else d.replace(tzinfo=UTC)
@@ -32,8 +29,6 @@ def parse_ts(s):
 
 
 def cutoff(cut_file, default):
-    """Parse --since/--dry from argv. Returns (CUT, START, dry, args).
-    CUT is --since, else the saved cutoff in cut_file, else now - default (a timedelta)."""
     args = sys.argv[1:]
     since = args[args.index('--since') + 1] if '--since' in args else None
     start = datetime.datetime.now(UTC)
@@ -74,7 +69,6 @@ FOCUS = re.compile(_FOCUS, re.I) if _FOCUS else None
 
 
 def focus_ok(title):
-    """targets.title_focus in settings.json: when set, only titles matching it pass every sweep."""
     return not FOCUS or bool(FOCUS.search(title or ''))
 
 
@@ -92,8 +86,6 @@ WIN = (_ym(_E.get('earliest_start')), _ym(_E.get('latest_start')))
 
 
 def term_ok(terms):
-    """True if any term ("Summer 2027") starts inside eligibility's start window, or a term names no
-    season, or there are no terms or no window."""
     if not terms or not all(WIN):
         return True
     for t in terms:

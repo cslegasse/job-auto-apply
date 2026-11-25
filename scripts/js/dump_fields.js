@@ -1,5 +1,3 @@
-// Read-only field dump for javascript_tool. Paste verbatim; returns one compact string.
-// Lines: "label = value"; then INVALID / EMPTY_REQUIRED / TRUNCATED lists.
 (() => {
   const clip = (s, n) => (s || '').trim().replace(/\s+/g, ' ').slice(0, n);
   const lab = el => clip((el.labels && el.labels[0] && el.labels[0].innerText) || el.getAttribute('aria-label')

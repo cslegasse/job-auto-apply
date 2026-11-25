@@ -12,9 +12,6 @@ SEEN_FILE = os.path.join(R, 'state', 'list_seen.json')
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from sweep_out import parse_ts, cutoff, save_cutoff, ssl_ctx, focus_ok, term_ok, title_term_ok, show
 
-# Markdown lists. speedyapply links straight to the company's ATS. Zapply links go through a
-# zapply.jobs redirect whose slug names the real req (greenhouse-<org>-<id>, ashby-<org>-<uuid>,
-# lever-<org>-<uuid>), so we rebuild the company's own ATS URL and never send the user through zapply.
 SPEEDY = [('speedyapply SWE', 'speedyapply/2026-SWE-College-Jobs'), ('speedyapply AI', 'speedyapply/2026-AI-College-Jobs')]
 ZAPPLY = ('Zapply', 'zapplyjobs/New-Grad-Jobs-2027')
 ZAPPLY_SECTIONS = re.compile(r'Software Engineering|Data, AI|Security Engineering|Hardware & Systems', re.I)
@@ -141,7 +138,7 @@ def zp_ats(u):
     for rx, fmt in ZP_ATS:
         m = rx.match(slug)
         if m: return fmt.format(*m.groups())
-    return None  # Workday, Oracle, iCIMS, Amazon, Apple...: account portals, out of scope
+    return None
 label, repo = ZAPPLY
 md = fetch(f'https://raw.githubusercontent.com/{repo}/main/README.md')
 if not md: print(f'  ! {label}: empty feed', file=sys.stderr)
@@ -160,7 +157,6 @@ for line in md.splitlines():
     NEW_SEEN.add(url); harvest(url)
     co, t, locs = m.group('co').strip(), m.group('t').strip(), m.group('loc').strip()
     if re.search(r'\bremote\b', t + ' ' + locs, re.I) and not re.search(r'remote', locs, re.I): locs += '; Remote'
-    # Zapply is a US list but writes "California - San Francisco"; tag it US unless it names a foreign place.
     us = '' if ZP_FOREIGN.search(locs) else '; United States'
     if not re.search(r'intern|co-?op', t, re.I) and keep(t, co, locs + us):
         rows.append([label, co, posted.isoformat()[:10], t, locs[:80], '', '', url])

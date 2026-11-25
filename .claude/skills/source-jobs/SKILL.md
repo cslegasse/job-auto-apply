@@ -40,6 +40,7 @@ Direct APIs when needed (sleep ~2s between org queries):
 Add vetted postings near the top of `data/queue.md` under `## Next up (vetted <date>)`, best first,
 one row per company:
 `- [ ] Company | Role (location) | ATS id. short note. URL`
+Write each row as soon as it is vetted, not all at the end: a session cut short keeps what it vetted.
 
 Before adding rows, re-check every pending `- [ ]` row against the gate (it may have changed):
 mark failures `[-]` with a short reason, using the row text and the ATS API.
